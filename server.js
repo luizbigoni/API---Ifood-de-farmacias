@@ -15,7 +15,7 @@ import router from './routes/route.js';
 import Database from './config/db.js';
 //dotenv.config();
 const app = express();
-const port = process.env.PORT;
+const port = process.env.PORT || 3000;
 Database.connect();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');

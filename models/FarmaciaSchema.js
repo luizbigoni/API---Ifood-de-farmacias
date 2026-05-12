@@ -9,7 +9,7 @@ const FarmaciaSchema = new mongoose.Schema(
         telefone: {type: String, required: true},
         taxaEntrega: {type: Number, required: true},
         aberta: {type: Boolean, required: true},
-        endereco: {type: mongoose.Schema.Types.ObjectId, ref: 'Endereco', required: true},
+        endereco: {type: mongoose.Schema.Types.Mixed, required: true},
     },
     {
         timestamps: true, // Cria campos de createdAt e updatedAt automaticamente

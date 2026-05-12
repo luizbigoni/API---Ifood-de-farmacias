@@ -1,6 +1,15 @@
-import FarmaciaModel from "./FarmaciaSchema";
+import FarmaciaModel from "./FarmaciaSchema.js";
 
 class Farmacia {
+    #nome;
+    #cnpj;
+    #email;
+    #senha;
+    #telefone;
+    #taxaEntrega;
+    #aberta;
+    #endereco;
+
     constructor(nome, cnpj, email, senha, telefone, taxaEntrega, aberta, endereco) {
         this.nome = nome;
         this.cnpj = cnpj;
@@ -77,6 +86,10 @@ class Farmacia {
         this.endereco = endereco;
     }   
 
+    async save() {
+        return await Farmacia.save(this);
+    }
+
     static async save(farmacia) {
         const novaFarmacia = new FarmaciaModel({
             nome: farmacia.getNome(),
@@ -94,23 +107,32 @@ class Farmacia {
 
 
     static async findAll(){
-        return await FarmaciaModel.find();
+        return await FarmaciaModel.find().sort({ createdAt: -1 });
     }
 
     static async findById(id){
         return await FarmaciaModel.findById(id);
     }
 
-        static async findByCnpj(cnpj){
-            return await FarmaciaModel.findOne({cnpj : cnpj});
+    static async findByCnpj(cnpj){
+        return await FarmaciaModel.findOne({ cnpj: cnpj });
+    }
+
+    static async findByEmail(email){
+        return await FarmaciaModel.findOne({ email: email });
+    }
+
+    static async update(id, dadosFarmacia){
+        return await FarmaciaModel.findByIdAndUpdate(
+            id,
+            dadosFarmacia,
+            { new: true, runValidators: true }
+        );
     }
 
     static async delete(id){
         return await FarmaciaModel.findByIdAndDelete(id);
     }
-
-
-
 }
 
 export default Farmacia;    

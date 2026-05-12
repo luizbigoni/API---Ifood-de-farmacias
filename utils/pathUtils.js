@@ -1,4 +1,7 @@
 import path from 'path';
-const pathAbsolute = new URL('.', import.meta.url).pathname;
-const __dirname = path.dirname(pathAbsolute).slice(1);
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(path.dirname(__filename));
+
 export default __dirname;
