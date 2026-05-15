@@ -9,7 +9,20 @@ import morgan from 'morgan';
 const staticMiddleware = express.static(path.join(__dirname, 'assets'));
 const urlencodedMiddleware = express.urlencoded({ extended: true });
 const jsonMiddleware = express.json();
-const securityMiddleware = helmet();
+const securityMiddleware = helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-eval'", "https://unpkg.com"],
+            styleSrc: ["'self'"],
+            imgSrc: ["'self'", "data:"],
+            connectSrc: ["'self'"],
+            fontSrc: ["'self'"],
+            objectSrc: ["'none'"],
+            upgradeInsecureRequests: null
+        }
+    }
+});
 const compressionMiddleware = compression();
 const rateLimitMiddleware = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutos

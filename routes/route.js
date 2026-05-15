@@ -11,6 +11,19 @@ router.get('/', (req, res) => {
     res.json({ message: 'API de farmacias funcionando' });
 });
 
+// Telas do frontend em Vue
+router.get('/frontend/cliente', (req, res) => {
+    res.render('frontend-cliente', {
+        title: 'RoxoFarma - Cliente'
+    });
+});
+
+router.get('/frontend/farmacia', (req, res) => {
+    res.render('frontend-farmacia', {
+        title: 'RoxoFarma - Farmacia'
+    });
+});
+
 // Rotas de login e cadastro
 router.get('/login', (req, res) => res.redirect('/login/cliente'));
 router.get('/login/cliente', AuthController.renderLoginCliente);

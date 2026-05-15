@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/frontend.css">
+</head>
+<body>
+    <div id="app" v-cloak class="farmacia-app">
+        <header class="admin-topo">
+            <div>
+                <a class="brand" href="/frontend/farmacia">
+                    <span class="brand-mark">+</span>
+                    <span>RoxoFarma Admin</span>
+                </a>
+                <p>Cadastro simples de produtos da farmacia.</p>
+            </div>
+            <nav class="topo-acoes">
+                <a href="/frontend/cliente">Ver loja</a>
+                <a href="/login/farmacia">Sair</a>
+            </nav>
+        </header>
+
+        <main class="admin-layout">
+            <section class="admin-form-area">
+                <div class="section-heading">
+                    <h1>{{ editando ? 'Editar produto' : 'Novo produto' }}</h1>
+                    <span v-if="farmacia.nome">{{ farmacia.nome }}</span>
+                </div>
+
+                <p class="mensagem" v-if="mensagem">{{ mensagem }}</p>
+
+                <label v-if="!farmaciaId">
+                    Farmacia
+                    <select v-model="form.farmacia" @change="trocarFarmacia">
+                        <option value="">Selecione</option>
+                        <option v-for="item in farmacias" :value="item._id">{{ item.nome }}</option>
+                    </select>
+                </label>
+
+                <form class="admin-form" @submit.prevent="salvarProduto">
+                    <label>
+                        Nome
+                        <input type="text" v-model="form.nome" required>
+                    </label>
+
+                    <label>
+                        Descricao
+                        <textarea v-model="form.descricao" required></textarea>
+                    </label>
+
+                    <div class="form-duas-colunas">
+                        <label>
+                            Preco
+                            <input type="number" min="0" step="0.01" v-model.number="form.preco" required>
+                        </label>
+
+                        <label>
+                            Quantidade
+                            <input type="number" min="0" v-model.number="form.quantidade" required>
+                        </label>
+                    </div>
+
+                    <div class="form-acoes">
+                        <button type="submit">{{ editando ? 'Atualizar' : 'Cadastrar' }}</button>
+                        <button type="button" class="botao-secundario" @click="limparFormulario" v-if="editando">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="admin-lista-area">
+                <div class="section-heading">
+                    <h2>Produtos cadastrados</h2>
+                    <span>{{ produtos.length }} itens</span>
+                </div>
+
+                <div class="admin-resumo" v-if="farmacia._id">
+                    <span :class="{ aberto: farmacia.aberta }">{{ farmacia.aberta ? 'Aberta' : 'Fechada' }}</span>
+                    <span>Entrega {{ dinheiro(farmacia.taxaEntrega) }}</span>
+                    <span>{{ farmacia.telefone }}</span>
+                </div>
+
+                <table v-if="produtos.length">
+                    <thead>
+                        <tr>
+                            <th>Produto</th>
+                            <th>Preco</th>
+                            <th>Estoque</th>
+                            <th>Acoes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="produto in produtos">
+                            <td>
+                                <strong>{{ produto.nome }}</strong>
+                                <small>{{ produto.descricao }}</small>
+                            </td>
+                            <td>{{ dinheiro(produto.preco) }}</td>
+                            <td>{{ produto.quantidade }}</td>
+                            <td class="tabela-acoes">
+                                <button type="button" @click="editarProduto(produto)">Editar</button>
+                                <button type="button" class="perigo" @click="excluirProduto(produto._id)">Excluir</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p class="estado-vazio" v-else>
+                    Nenhum produto cadastrado ainda.
+                </p>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="/js/farmacia-app.js"></script>
+</body>
+</html>
