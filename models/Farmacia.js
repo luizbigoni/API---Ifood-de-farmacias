@@ -119,7 +119,7 @@ class Farmacia {
     }
 
     static async findByEmail(email){
-        return await FarmaciaModel.findOne({ email: email });
+        return await FarmaciaModel.findOne({ email: String(email || '').trim().toLowerCase() });
     }
 
     static async update(id, dadosFarmacia){

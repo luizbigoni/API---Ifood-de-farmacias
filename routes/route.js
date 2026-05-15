@@ -3,12 +3,23 @@ import FarmaciaController from '../controller/FarmaciaController.js';
 import ProdutoController from '../controller/ProdutoController.js';
 import ClienteController from '../controller/ClienteController.js';
 import CarrinhoController from '../controller/CarrinhoController.js';
+import AuthController from '../controller/AuthController.js';
 
 const router = express.Router();
 
 router.get('/', (req, res) => {
     res.json({ message: 'API de farmacias funcionando' });
 });
+
+// Rotas de login e cadastro
+router.get('/login', (req, res) => res.redirect('/login/cliente'));
+router.get('/login/cliente', AuthController.renderLoginCliente);
+router.get('/login/farmacia', AuthController.renderLoginFarmacia);
+router.post('/login', AuthController.login);
+router.get('/cadastro/cliente', AuthController.renderCadastroCliente);
+router.get('/cadastro/farmacia', AuthController.renderCadastroFarmacia);
+router.post('/cadastro/cliente', AuthController.cadastrarCliente);
+router.post('/cadastro/farmacia', AuthController.cadastrarFarmacia);
 
 // Rotas para farmacias
 router.get('/farmacias', FarmaciaController.getAllFarmacias);

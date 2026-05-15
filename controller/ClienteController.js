@@ -1,4 +1,5 @@
 import Cliente from '../models/Cliente.js';
+import Farmacia from '../models/Farmacia.js';
 import mongoose from 'mongoose';
 
 const camposPermitidos = [
@@ -78,6 +79,11 @@ class ClienteController {
                 return res.status(400).json({ message: 'Ja existe um cliente com esse email' });
             }
 
+            const farmaciaEmailExistente = await Farmacia.findByEmail(email);
+            if (farmaciaEmailExistente) {
+                return res.status(400).json({ message: 'Ja existe uma farmacia com esse email' });
+            }
+
             const novoCliente = new Cliente(nome, cpf, email, senha, telefone, endereco);
             const clienteSalvo = await novoCliente.save();
 
@@ -92,6 +98,14 @@ class ClienteController {
         try {
             const { id } = req.params;
             const dadosAtualizacao = filtrarCamposPermitidos(req.body);
+
+            if (dadosAtualizacao.email) {
+                const farmaciaEmailExistente = await Farmacia.findByEmail(dadosAtualizacao.email);
+                if (farmaciaEmailExistente) {
+                    return res.status(400).json({ message: 'Ja existe uma farmacia com esse email' });
+                }
+            }
+
             const clienteAtualizado = await Cliente.update(id, dadosAtualizacao);
 
             if (!clienteAtualizado) {

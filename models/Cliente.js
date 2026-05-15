@@ -96,7 +96,7 @@ class Cliente {
     }
 
     static async findByEmail(email) {
-        return await ClienteModel.findOne({ email });
+        return await ClienteModel.findOne({ email: String(email || '').trim().toLowerCase() });
     }
 
     static async update(id, dadosCliente) {

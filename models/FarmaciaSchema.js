@@ -4,7 +4,7 @@ const FarmaciaSchema = new mongoose.Schema(
     {
         nome: {type: String, required: true},
         cnpj: {type: String, required: true, unique: true},
-        email: {type: String, required: true, unique: true},
+        email: {type: String, required: true, unique: true, trim: true, lowercase: true},
         senha: {type: String, required: true},
         telefone: {type: String, required: true},
         taxaEntrega: {type: Number, required: true},
