@@ -10,9 +10,9 @@
     <div id="app" v-cloak class="cliente-app">
         <header class="cliente-topo">
             <div>
-                <a class="brand" href="/frontend/cliente">
+                <a class="brand" :href="urlCliente">
                     <span class="brand-mark">+</span>
-                    <span>RoxoFarma</span>
+                    <span>healthDelivery</span>
                 </a>
                 <p class="endereco" v-if="cliente._id">
                     Entregar em {{ formatarEndereco(cliente.endereco) }}
@@ -22,9 +22,27 @@
                 </p>
             </div>
 
-            <nav class="topo-acoes">
-                <a href="/login/cliente">Cliente</a>
-                <a href="/login/farmacia">Farmacia</a>
+            <details class="perfil-menu" v-if="clienteId">
+                <summary>
+                    <span class="perfil-avatar">{{ iniciais(cliente.nome) }}</span>
+                    <span>{{ cliente.nome || 'Carregando perfil' }}</span>
+                </summary>
+                <div class="perfil-dropdown" v-if="cliente._id">
+                    <button type="button" @click="abrirEdicaoCliente">Editar meus dados</button>
+                    <button type="button" @click="alternarPedidos">Seus pedidos</button>
+                    <button type="button" @click="sair">Sair</button>
+                </div>
+            </details>
+
+            <nav class="topo-acoes" v-else>
+                <template v-if="!farmaciaLogadaId">
+                    <a href="/login/cliente">Cliente</a>
+                    <a href="/login/farmacia">Farmacia</a>
+                </template>
+                <template v-else>
+                    <a :href="urlFarmaciaLogada">Painel</a>
+                    <button type="button" class="topo-botao" @click="sair">Sair</button>
+                </template>
             </nav>
         </header>
 
@@ -87,12 +105,12 @@
                         <span>{{ produtosFiltrados.length }} opcoes</span>
                     </div>
 
-                    <p class="mensagem" v-if="mensagem">{{ mensagem }}</p>
+                    <p class="mensagem" v-if="mensagemProdutos">{{ mensagemProdutos }}</p>
 
                     <div class="produtos-grid" v-if="produtosFiltrados.length">
                         <article class="produto-card" v-for="produto in produtosFiltrados">
                             <div class="produto-foto">
-                                <span>{{ iconeProduto(produto) }}</span>
+                                <img :src="fotoProduto(produto)" :class="classeFotoProduto(produto)" :alt="produto.nome">
                             </div>
                             <div class="produto-info">
                                 <p class="produto-farmacia">{{ nomeFarmacia(produto.farmacia) }}</p>
@@ -151,8 +169,112 @@
                 <p class="estado-vazio" v-else>
                     Seu carrinho esta vazio.
                 </p>
+
+                <p class="mensagem mensagem-carrinho" v-if="mensagemCarrinho">{{ mensagemCarrinho }}</p>
             </aside>
         </main>
+
+        <div class="modal-backdrop" v-if="editandoPerfil">
+            <section class="modal">
+                <div class="section-heading">
+                    <h2>Editar meus dados</h2>
+                    <button type="button" class="botao-fechar" @click="editandoPerfil = false">Fechar</button>
+                </div>
+
+                <form class="perfil-form" @submit.prevent="salvarCliente">
+                    <div class="form-duas-colunas">
+                        <label>
+                            Nome
+                            <input type="text" v-model="formCliente.nome" required>
+                        </label>
+                        <label>
+                            CPF
+                            <input type="text" v-model="formCliente.cpf" required>
+                        </label>
+                    </div>
+
+                    <div class="form-duas-colunas">
+                        <label>
+                            Email
+                            <input type="email" v-model="formCliente.email" required>
+                        </label>
+                        <label>
+                            Telefone
+                            <input type="tel" v-model="formCliente.telefone" required>
+                        </label>
+                    </div>
+
+                    <label>
+                        Nova senha
+                        <input type="password" v-model="formCliente.senha" placeholder="Deixe vazio para manter">
+                    </label>
+
+                    <div class="form-duas-colunas">
+                        <label>
+                            CEP
+                            <input type="text" v-model="formCliente.endereco.cep" required>
+                        </label>
+                        <label>
+                            Rua
+                            <input type="text" v-model="formCliente.endereco.rua" required>
+                        </label>
+                    </div>
+
+                    <div class="form-duas-colunas">
+                        <label>
+                            Numero
+                            <input type="text" v-model="formCliente.endereco.numero" required>
+                        </label>
+                        <label>
+                            Bairro
+                            <input type="text" v-model="formCliente.endereco.bairro" required>
+                        </label>
+                    </div>
+
+                    <div class="form-duas-colunas">
+                        <label>
+                            Cidade
+                            <input type="text" v-model="formCliente.endereco.cidade" required>
+                        </label>
+                        <label>
+                            Estado
+                            <input type="text" v-model="formCliente.endereco.estado" required>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="botao-principal">Salvar alteracoes</button>
+                </form>
+            </section>
+        </div>
+
+        <div class="modal-backdrop" v-if="mostrarPedidos">
+            <section class="modal">
+                <div class="section-heading">
+                    <div>
+                        <h2>Seus pedidos</h2>
+                        <span>{{ pedidosCliente.length }} pedidos finalizados</span>
+                    </div>
+                    <button type="button" class="botao-fechar" @click="mostrarPedidos = false">Fechar</button>
+                </div>
+
+                <div class="pedidos-lista" v-if="pedidosCliente.length">
+                    <article class="pedido-card" v-for="pedido in pedidosCliente">
+                        <div>
+                            <h3>Pedido {{ pedido._id.slice(-6).toUpperCase() }}</h3>
+                            <p>{{ nomeFarmacia(pedido.farmacia) }} - {{ pedido.status }}</p>
+                        </div>
+                        <strong>{{ dinheiro(pedido.valorTotal) }}</strong>
+                        <ul>
+                            <li v-for="item in pedido.itens">
+                                {{ item.quantidade }}x {{ item.produto.nome }}
+                            </li>
+                        </ul>
+                    </article>
+                </div>
+
+                <p class="estado-vazio" v-else>Nenhum pedido finalizado ainda.</p>
+            </section>
+        </div>
     </div>
 
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>

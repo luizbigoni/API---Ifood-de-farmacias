@@ -14,20 +14,26 @@ router.get('/', (req, res) => {
 // Telas do frontend em Vue
 router.get('/frontend/cliente', (req, res) => {
     res.render('frontend-cliente', {
-        title: 'RoxoFarma - Cliente'
+        title: 'healthDelivery - Cliente'
     });
 });
 
 router.get('/frontend/farmacia', (req, res) => {
     res.render('frontend-farmacia', {
-        title: 'RoxoFarma - Farmacia'
+        title: 'healthDelivery - Farmacia'
     });
 });
 
 // Rotas de login e cadastro
-router.get('/login', (req, res) => res.redirect('/login/cliente'));
+router.get('/login', (req, res) => {
+    res.render('login-escolha', {
+        title: 'healthDelivery - Login'
+    });
+});
 router.get('/login/cliente', AuthController.renderLoginCliente);
 router.get('/login/farmacia', AuthController.renderLoginFarmacia);
+router.post('/login/cliente', AuthController.loginCliente);
+router.post('/login/farmacia', AuthController.loginFarmacia);
 router.post('/login', AuthController.login);
 router.get('/cadastro/cliente', AuthController.renderCadastroCliente);
 router.get('/cadastro/farmacia', AuthController.renderCadastroFarmacia);

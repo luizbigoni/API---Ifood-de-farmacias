@@ -5,11 +5,28 @@ createApp({
         return {
             farmaciaId: '',
             farmacia: {},
-            farmacias: [],
             produtos: [],
             mensagem: '',
+            editandoPerfil: false,
             editando: false,
             produtoEditandoId: '',
+            formFarmacia: {
+                nome: '',
+                cnpj: '',
+                email: '',
+                senha: '',
+                telefone: '',
+                taxaEntrega: 0,
+                aberta: true,
+                endereco: {
+                    cep: '',
+                    rua: '',
+                    numero: '',
+                    bairro: '',
+                    cidade: '',
+                    estado: ''
+                }
+            },
             form: {
                 nome: '',
                 descricao: '',
@@ -20,10 +37,18 @@ createApp({
         };
     },
 
+    computed: {
+        urlFarmacia() {
+            if (!this.farmaciaId) {
+                return '/login';
+            }
+
+            return `/frontend/farmacia?id=${this.farmaciaId}`;
+        }
+    },
+
     methods: {
         async carregarDados() {
-            await this.carregarFarmacias();
-
             if (this.farmaciaId) {
                 this.form.farmacia = this.farmaciaId;
                 await this.carregarFarmacia();
@@ -31,17 +56,35 @@ createApp({
             }
         },
 
-        async carregarFarmacias() {
-            const resposta = await fetch('/farmacias');
-            this.farmacias = await resposta.json();
-        },
-
         async carregarFarmacia() {
             const resposta = await fetch(`/farmacias/${this.farmaciaId}`);
 
             if (resposta.ok) {
                 this.farmacia = await resposta.json();
+                this.preencherFormFarmacia();
             }
+        },
+
+        preencherFormFarmacia() {
+            const endereco = this.farmacia.endereco || {};
+
+            this.formFarmacia = {
+                nome: this.farmacia.nome || '',
+                cnpj: this.farmacia.cnpj || '',
+                email: this.farmacia.email || '',
+                senha: '',
+                telefone: this.farmacia.telefone || '',
+                taxaEntrega: this.farmacia.taxaEntrega || 0,
+                aberta: Boolean(this.farmacia.aberta),
+                endereco: {
+                    cep: endereco.cep || '',
+                    rua: endereco.rua || '',
+                    numero: endereco.numero || '',
+                    bairro: endereco.bairro || '',
+                    cidade: endereco.cidade || '',
+                    estado: endereco.estado || ''
+                }
+            };
         },
 
         async carregarProdutos() {
@@ -59,7 +102,7 @@ createApp({
 
         async salvarProduto() {
             if (!this.form.farmacia) {
-                this.mensagem = 'Selecione uma farmacia antes de cadastrar.';
+                window.location.href = '/login';
                 return;
             }
 
@@ -82,6 +125,45 @@ createApp({
             this.mensagem = this.editando ? 'Produto atualizado com sucesso.' : 'Produto cadastrado com sucesso.';
             this.limparFormulario();
             await this.carregarProdutos();
+        },
+
+        abrirEdicaoFarmacia() {
+            this.preencherFormFarmacia();
+            this.editandoPerfil = true;
+        },
+
+        async salvarFarmacia() {
+            const dadosFarmacia = {
+                nome: this.formFarmacia.nome,
+                cnpj: this.formFarmacia.cnpj,
+                email: this.formFarmacia.email,
+                telefone: this.formFarmacia.telefone,
+                taxaEntrega: this.formFarmacia.taxaEntrega,
+                aberta: this.formFarmacia.aberta,
+                endereco: this.formFarmacia.endereco
+            };
+
+            if (this.formFarmacia.senha) {
+                dadosFarmacia.senha = this.formFarmacia.senha;
+            }
+
+            const resposta = await fetch(`/farmacias/${this.farmaciaId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dadosFarmacia)
+            });
+
+            const dados = await resposta.json();
+
+            if (!resposta.ok) {
+                this.mensagem = dados.message || 'Nao foi possivel atualizar a farmacia.';
+                return;
+            }
+
+            this.farmacia = dados;
+            this.preencherFormFarmacia();
+            this.editandoPerfil = false;
+            this.mensagem = 'Dados da farmacia atualizados com sucesso.';
         },
 
         editarProduto(produto) {
@@ -127,11 +209,10 @@ createApp({
             };
         },
 
-        async trocarFarmacia() {
-            this.farmaciaId = this.form.farmacia;
-            this.farmacia = this.farmacias.find((item) => item._id === this.farmaciaId) || {};
-            this.limparFormulario();
-            await this.carregarProdutos();
+        sair() {
+            localStorage.removeItem('healthDeliveryFarmaciaId');
+            localStorage.removeItem('healthDeliveryClienteId');
+            window.location.href = '/login';
         },
 
         dinheiro(valor) {
@@ -139,12 +220,37 @@ createApp({
                 style: 'currency',
                 currency: 'BRL'
             });
+        },
+
+        iniciais(nome) {
+            return String(nome || 'HD')
+                .split(' ')
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((parte) => parte[0].toUpperCase())
+                .join('');
         }
     },
 
     mounted() {
         const parametros = new URLSearchParams(window.location.search);
-        this.farmaciaId = parametros.get('id') || '';
+        const idUrl = parametros.get('id') || '';
+        const idSalvo = localStorage.getItem('healthDeliveryFarmaciaId') || '';
+
+        this.farmaciaId = idUrl || idSalvo;
+
+        if (!this.farmaciaId) {
+            window.location.href = '/login';
+            return;
+        }
+
+        localStorage.setItem('healthDeliveryFarmaciaId', this.farmaciaId);
+        localStorage.removeItem('healthDeliveryClienteId');
+
+        if (!idUrl) {
+            window.history.replaceState(null, '', this.urlFarmacia);
+        }
+
         this.carregarDados();
     }
 }).mount('#app');

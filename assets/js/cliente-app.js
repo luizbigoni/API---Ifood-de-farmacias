@@ -4,6 +4,7 @@ createApp({
     data() {
         return {
             clienteId: '',
+            farmaciaLogadaId: '',
             cliente: {},
             farmacias: [],
             produtos: [],
@@ -15,7 +16,26 @@ createApp({
             busca: '',
             categoriaSelecionada: '',
             farmaciaSelecionada: '',
-            mensagem: '',
+            mensagemProdutos: '',
+            mensagemCarrinho: '',
+            mostrarPedidos: false,
+            editandoPerfil: false,
+            pedidos: [],
+            formCliente: {
+                nome: '',
+                cpf: '',
+                email: '',
+                senha: '',
+                telefone: '',
+                endereco: {
+                    cep: '',
+                    rua: '',
+                    numero: '',
+                    bairro: '',
+                    cidade: '',
+                    estado: ''
+                }
+            },
             quantidades: {},
             categorias: [
                 'Dor e febre',
@@ -56,6 +76,30 @@ createApp({
 
                 return bateBusca && bateCategoria && bateFarmacia;
             });
+        },
+
+        pedidosCliente() {
+            return this.pedidos.filter((pedido) => {
+                const clientePedido = pedido.cliente && (pedido.cliente._id || pedido.cliente);
+
+                return clientePedido === this.clienteId && pedido.status === 'finalizado';
+            });
+        },
+
+        urlCliente() {
+            if (!this.clienteId) {
+                return '/frontend/cliente';
+            }
+
+            return `/frontend/cliente?id=${this.clienteId}`;
+        },
+
+        urlFarmaciaLogada() {
+            if (!this.farmaciaLogadaId) {
+                return '/login';
+            }
+
+            return `/frontend/farmacia?id=${this.farmaciaLogadaId}`;
         }
     },
 
@@ -70,9 +114,10 @@ createApp({
                 if (this.clienteId) {
                     await this.carregarCliente();
                     await this.carregarCarrinho();
+                    await this.carregarPedidos();
                 }
             } catch (error) {
-                this.mensagem = error.message;
+                this.mensagemProdutos = error.message;
             }
         },
 
@@ -95,7 +140,28 @@ createApp({
 
             if (resposta.ok) {
                 this.cliente = await resposta.json();
+                this.preencherFormCliente();
             }
+        },
+
+        preencherFormCliente() {
+            const endereco = this.cliente.endereco || {};
+
+            this.formCliente = {
+                nome: this.cliente.nome || '',
+                cpf: this.cliente.cpf || '',
+                email: this.cliente.email || '',
+                senha: '',
+                telefone: this.cliente.telefone || '',
+                endereco: {
+                    cep: endereco.cep || '',
+                    rua: endereco.rua || '',
+                    numero: endereco.numero || '',
+                    bairro: endereco.bairro || '',
+                    cidade: endereco.cidade || '',
+                    estado: endereco.estado || ''
+                }
+            };
         },
 
         async carregarCarrinho() {
@@ -113,9 +179,17 @@ createApp({
             };
         },
 
+        async carregarPedidos() {
+            const resposta = await fetch('/carrinhos');
+
+            if (resposta.ok) {
+                this.pedidos = await resposta.json();
+            }
+        },
+
         async adicionarAoCarrinho(produto) {
             if (!this.clienteId) {
-                this.mensagem = 'Entre como cliente para adicionar produtos.';
+                this.mensagemCarrinho = 'Entre como cliente para adicionar produtos.';
                 return;
             }
 
@@ -131,11 +205,11 @@ createApp({
             const dados = await resposta.json();
 
             if (!resposta.ok) {
-                this.mensagem = dados.message || 'Nao foi possivel adicionar o produto.';
+                this.mensagemCarrinho = dados.message || 'Nao foi possivel adicionar o produto.';
                 return;
             }
 
-            this.mensagem = dados.message;
+            this.mensagemCarrinho = dados.message;
             this.carrinho = dados.carrinho;
         },
 
@@ -145,7 +219,7 @@ createApp({
             });
 
             const dados = await resposta.json();
-            this.mensagem = dados.message;
+            this.mensagemCarrinho = dados.message;
 
             if (resposta.ok) {
                 this.carrinho = dados.carrinho;
@@ -158,7 +232,7 @@ createApp({
             });
 
             const dados = await resposta.json();
-            this.mensagem = dados.message;
+            this.mensagemCarrinho = dados.message;
 
             if (resposta.ok) {
                 this.carrinho = dados.carrinho;
@@ -171,12 +245,64 @@ createApp({
             });
 
             const dados = await resposta.json();
-            this.mensagem = dados.message;
+            this.mensagemCarrinho = dados.message;
 
             if (resposta.ok) {
                 await this.carregarCarrinho();
                 await this.carregarProdutos();
+                await this.carregarPedidos();
             }
+        },
+
+        abrirEdicaoCliente() {
+            this.preencherFormCliente();
+            this.editandoPerfil = true;
+        },
+
+        async salvarCliente() {
+            const dadosCliente = {
+                nome: this.formCliente.nome,
+                cpf: this.formCliente.cpf,
+                email: this.formCliente.email,
+                telefone: this.formCliente.telefone,
+                endereco: this.formCliente.endereco
+            };
+
+            if (this.formCliente.senha) {
+                dadosCliente.senha = this.formCliente.senha;
+            }
+
+            const resposta = await fetch(`/clientes/${this.clienteId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dadosCliente)
+            });
+
+            const dados = await resposta.json();
+
+            if (!resposta.ok) {
+                this.mensagemCarrinho = dados.message || 'Nao foi possivel atualizar seus dados.';
+                return;
+            }
+
+            this.cliente = dados;
+            this.preencherFormCliente();
+            this.editandoPerfil = false;
+            this.mensagemCarrinho = 'Dados atualizados com sucesso.';
+        },
+
+        async alternarPedidos() {
+            this.mostrarPedidos = !this.mostrarPedidos;
+
+            if (this.mostrarPedidos) {
+                await this.carregarPedidos();
+            }
+        },
+
+        sair() {
+            localStorage.removeItem('healthDeliveryClienteId');
+            localStorage.removeItem('healthDeliveryFarmaciaId');
+            window.location.href = '/login';
         },
 
         selecionarFarmacia(farmaciaId) {
@@ -227,6 +353,32 @@ createApp({
             return 'Rx';
         },
 
+        fotoProduto() {
+            return '/img/medicamentos.png';
+        },
+
+        classeFotoProduto(produto) {
+            const categoria = this.categoriaDoProduto(produto);
+
+            if (categoria === 'Vitaminas') {
+                return 'foto-vitaminas';
+            }
+
+            if (categoria === 'Higiene') {
+                return 'foto-higiene';
+            }
+
+            if (categoria === 'Primeiros socorros') {
+                return 'foto-socorros';
+            }
+
+            if (categoria === 'Gripe') {
+                return 'foto-gripe';
+            }
+
+            return 'foto-remedio';
+        },
+
         nomeFarmacia(farmacia) {
             if (!farmacia) {
                 return 'Farmacia';
@@ -236,7 +388,7 @@ createApp({
         },
 
         iniciais(nome) {
-            return String(nome || 'RF')
+            return String(nome || 'HD')
                 .split(' ')
                 .filter(Boolean)
                 .slice(0, 2)
@@ -266,7 +418,21 @@ createApp({
 
     mounted() {
         const parametros = new URLSearchParams(window.location.search);
-        this.clienteId = parametros.get('id') || '';
+        const idUrl = parametros.get('id') || '';
+        const idSalvo = localStorage.getItem('healthDeliveryClienteId') || '';
+        this.farmaciaLogadaId = localStorage.getItem('healthDeliveryFarmaciaId') || '';
+
+        this.clienteId = idUrl || idSalvo;
+
+        if (this.clienteId) {
+            localStorage.setItem('healthDeliveryClienteId', this.clienteId);
+            localStorage.removeItem('healthDeliveryFarmaciaId');
+
+            if (!idUrl) {
+                window.history.replaceState(null, '', this.urlCliente);
+            }
+        }
+
         this.carregarDados();
     }
 }).mount('#app');

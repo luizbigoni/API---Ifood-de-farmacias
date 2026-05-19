@@ -128,6 +128,29 @@ button:hover {
     font-weight: 700;
 }
 
+.login-choice {
+    display: grid;
+    gap: 12px;
+    margin-top: 22px;
+}
+
+.choice-button {
+    display: grid;
+    min-height: 46px;
+    place-items: center;
+    border-radius: 6px;
+    color: #ffffff;
+    background: #2563eb;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.choice-outline {
+    border: 1px solid #2563eb;
+    color: #2563eb;
+    background: #ffffff;
+}
+
 @media (max-width: 640px) {
     .auth-panel {
         padding: 24px;

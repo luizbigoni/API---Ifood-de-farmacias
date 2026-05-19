@@ -10,15 +10,26 @@
     <div id="app" v-cloak class="farmacia-app">
         <header class="admin-topo">
             <div>
-                <a class="brand" href="/frontend/farmacia">
+                <a class="brand" :href="urlFarmacia">
                     <span class="brand-mark">+</span>
-                    <span>RoxoFarma Admin</span>
+                    <span>healthDelivery Admin</span>
                 </a>
                 <p>Cadastro simples de produtos da farmacia.</p>
             </div>
-            <nav class="topo-acoes">
-                <a href="/frontend/cliente">Ver loja</a>
-                <a href="/login/farmacia">Sair</a>
+
+            <details class="perfil-menu" v-if="farmaciaId && farmacia._id">
+                <summary>
+                    <span class="perfil-avatar">{{ iniciais(farmacia.nome) }}</span>
+                    <span>{{ farmacia.nome }}</span>
+                </summary>
+                <div class="perfil-dropdown">
+                    <button type="button" @click="abrirEdicaoFarmacia">Editar dados</button>
+                    <button type="button" @click="sair">Sair</button>
+                </div>
+            </details>
+
+            <nav class="topo-acoes" v-else>
+                <a href="/login">Login</a>
             </nav>
         </header>
 
@@ -30,14 +41,6 @@
                 </div>
 
                 <p class="mensagem" v-if="mensagem">{{ mensagem }}</p>
-
-                <label v-if="!farmaciaId">
-                    Farmacia
-                    <select v-model="form.farmacia" @change="trocarFarmacia">
-                        <option value="">Selecione</option>
-                        <option v-for="item in farmacias" :value="item._id">{{ item.nome }}</option>
-                    </select>
-                </label>
 
                 <form class="admin-form" @submit.prevent="salvarProduto">
                     <label>
@@ -113,6 +116,93 @@
                 </p>
             </section>
         </main>
+
+        <div class="modal-backdrop" v-if="editandoPerfil">
+            <section class="modal">
+                <div class="section-heading">
+                    <h2>Editar farmacia</h2>
+                    <button type="button" class="botao-fechar" @click="editandoPerfil = false">Fechar</button>
+                </div>
+
+                <form class="perfil-form" @submit.prevent="salvarFarmacia">
+                    <div class="form-duas-colunas">
+                        <label>
+                            Nome
+                            <input type="text" v-model="formFarmacia.nome" required>
+                        </label>
+                        <label>
+                            CNPJ
+                            <input type="text" v-model="formFarmacia.cnpj" required>
+                        </label>
+                    </div>
+
+                    <div class="form-duas-colunas">
+                        <label>
+                            Email
+                            <input type="email" v-model="formFarmacia.email" required>
+                        </label>
+                        <label>
+                            Telefone
+                            <input type="tel" v-model="formFarmacia.telefone" required>
+                        </label>
+                    </div>
+
+                    <div class="form-duas-colunas">
+                        <label>
+                            Taxa de entrega
+                            <input type="number" min="0" step="0.01" v-model.number="formFarmacia.taxaEntrega" required>
+                        </label>
+                        <label>
+                            Situacao
+                            <select v-model="formFarmacia.aberta">
+                                <option :value="true">Aberta</option>
+                                <option :value="false">Fechada</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <label>
+                        Nova senha
+                        <input type="password" v-model="formFarmacia.senha" placeholder="Deixe vazio para manter">
+                    </label>
+
+                    <div class="form-duas-colunas">
+                        <label>
+                            CEP
+                            <input type="text" v-model="formFarmacia.endereco.cep" required>
+                        </label>
+                        <label>
+                            Rua
+                            <input type="text" v-model="formFarmacia.endereco.rua" required>
+                        </label>
+                    </div>
+
+                    <div class="form-duas-colunas">
+                        <label>
+                            Numero
+                            <input type="text" v-model="formFarmacia.endereco.numero" required>
+                        </label>
+                        <label>
+                            Bairro
+                            <input type="text" v-model="formFarmacia.endereco.bairro" required>
+                        </label>
+                    </div>
+
+                    <div class="form-duas-colunas">
+                        <label>
+                            Cidade
+                            <input type="text" v-model="formFarmacia.endereco.cidade" required>
+                        </label>
+                        <label>
+                            Estado
+                            <input type="text" v-model="formFarmacia.endereco.estado" required>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="botao-principal">Salvar alteracoes</button>
+                </form>
+            </section>
+        </div>
     </div>
 
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>

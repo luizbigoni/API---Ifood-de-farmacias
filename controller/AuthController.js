@@ -74,11 +74,30 @@ class AuthController {
         });
     }
 
+    static async loginCliente(req, res) {
+        req.body.tipoLogin = 'cliente';
+        return AuthController.login(req, res);
+    }
+
+    static async loginFarmacia(req, res) {
+        req.body.tipoLogin = 'farmacia';
+        return AuthController.login(req, res);
+    }
+
     static async login(req, res) {
         try {
             const email = normalizarEmail(req.body.email);
             const { senha, tipoLogin } = req.body;
+            const tipoValido = tipoLogin === 'farmacia' || tipoLogin === 'cliente';
             const tipoTela = tipoLogin === 'farmacia' ? 'farmacia' : 'cliente';
+
+            if (!tipoValido) {
+                if (querHtml(req)) {
+                    return res.redirect('/login');
+                }
+
+                return res.status(400).json({ message: 'Tipo de login invalido' });
+            }
 
             if (!email || !senha) {
                 if (querHtml(req)) {
@@ -88,24 +107,28 @@ class AuthController {
                 return res.status(400).json({ message: 'Informe email e senha' });
             }
 
-            const [cliente, farmacia] = await Promise.all([
-                Cliente.findByEmail(email),
-                Farmacia.findByEmail(email)
-            ]);
-
-            if (cliente && farmacia) {
-                const message = 'Esse email esta cadastrado como cliente e farmacia. Use emails diferentes para que o login identifique o tipo de conta.';
-                if (querHtml(req)) {
-                    return renderizarErroLogin(req, res, tipoTela, message, 409);
-                }
-
-                return res.status(409).json({ message });
-            }
-
-            const usuario = cliente || farmacia;
-            const tipo = cliente ? 'cliente' : farmacia ? 'farmacia' : null;
+            const tipo = tipoLogin;
+            const usuario = tipo === 'farmacia'
+                ? await Farmacia.findByEmail(email)
+                : await Cliente.findByEmail(email);
 
             if (!usuario || usuario.senha !== senha) {
+                const usuarioOutroTipo = tipo === 'farmacia'
+                    ? await Cliente.findByEmail(email)
+                    : await Farmacia.findByEmail(email);
+
+                if (usuarioOutroTipo && usuarioOutroTipo.senha === senha) {
+                    const message = tipo === 'farmacia'
+                        ? 'Essa conta esta cadastrada como cliente. Entre pela tela de login do cliente.'
+                        : 'Essa conta esta cadastrada como farmacia. Entre pela tela de login da farmacia.';
+
+                    if (querHtml(req)) {
+                        return renderizarErroLogin(req, res, tipoTela, message, 401);
+                    }
+
+                    return res.status(401).json({ message });
+                }
+
                 if (querHtml(req)) {
                     return renderizarErroLogin(req, res, tipoTela, 'Email ou senha invalidos.', 401);
                 }

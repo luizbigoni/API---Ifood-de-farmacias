@@ -84,7 +84,8 @@ button:disabled {
     gap: 10px;
 }
 
-.topo-acoes a {
+.topo-acoes a,
+.topo-botao {
     min-height: 38px;
     padding: 9px 14px;
     border: 1px solid #d8dce7;
@@ -92,6 +93,73 @@ button:disabled {
     background: #ffffff;
     color: #3d146d;
     font-weight: 700;
+}
+
+.perfil-menu {
+    position: relative;
+}
+
+.perfil-menu summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 42px;
+    padding: 6px 12px 6px 6px;
+    border: 1px solid #d8dce7;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #3d146d;
+    font-weight: 800;
+    list-style: none;
+    cursor: pointer;
+}
+
+.perfil-menu summary::-webkit-details-marker {
+    display: none;
+}
+
+.perfil-avatar {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border-radius: 8px;
+    color: #ffffff;
+    background: #13a37b;
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+.perfil-dropdown {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    display: grid;
+    min-width: 210px;
+    padding: 8px;
+    border: 1px solid #e4e7ee;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 16px 34px rgba(33, 31, 45, 0.14);
+}
+
+.perfil-dropdown a,
+.perfil-dropdown button {
+    width: 100%;
+    min-height: 38px;
+    padding: 9px 10px;
+    border: 0;
+    border-radius: 6px;
+    color: #344054;
+    background: #ffffff;
+    text-align: left;
+    font-weight: 700;
+}
+
+.perfil-dropdown a:hover,
+.perfil-dropdown button:hover {
+    color: #3d146d;
+    background: #f7f1ff;
 }
 
 .cliente-layout {
@@ -334,14 +402,39 @@ textarea:focus {
 }
 
 .produto-foto {
-    display: grid;
+    overflow: hidden;
     width: 94px;
     height: 94px;
-    place-items: center;
     border-radius: 8px;
     background: #f0edf6;
-    color: #3d146d;
-    font-size: 2.2rem;
+}
+
+.produto-foto img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scale(1.9);
+}
+
+.produto-foto .foto-remedio {
+    object-position: 12% 48%;
+}
+
+.produto-foto .foto-gripe {
+    object-position: 36% 48%;
+}
+
+.produto-foto .foto-vitaminas {
+    object-position: 58% 48%;
+}
+
+.produto-foto .foto-socorros {
+    object-position: 78% 48%;
+}
+
+.produto-foto .foto-higiene {
+    object-position: 94% 48%;
 }
 
 .produto-info {
@@ -478,6 +571,85 @@ textarea:focus {
     border-radius: 8px;
     color: #667085;
     background: #ffffff;
+}
+
+.pedidos-lista {
+    display: grid;
+    gap: 12px;
+}
+
+.pedido-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px 16px;
+    padding: 14px;
+    border: 1px solid #edf0f5;
+    border-radius: 8px;
+    background: #fbfcff;
+}
+
+.pedido-card h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.pedido-card p {
+    margin: 5px 0 0;
+    color: #667085;
+    font-size: 0.9rem;
+}
+
+.pedido-card ul {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding-left: 18px;
+    color: #344054;
+}
+
+.mensagem-carrinho {
+    margin-top: 14px;
+}
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    display: grid;
+    place-items: center;
+    padding: 18px;
+    background: rgba(17, 24, 39, 0.48);
+}
+
+.modal {
+    width: min(720px, 100%);
+    max-height: min(88vh, 760px);
+    overflow: auto;
+    padding: 20px;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 24px 60px rgba(17, 24, 39, 0.24);
+}
+
+.perfil-form {
+    display: grid;
+    gap: 14px;
+}
+
+.perfil-form label {
+    display: grid;
+    gap: 8px;
+    color: #344054;
+    font-weight: 700;
+}
+
+.botao-fechar {
+    min-height: 34px;
+    padding: 7px 10px;
+    border: 1px solid #d8dce7;
+    border-radius: 8px;
+    color: #3d146d;
+    background: #ffffff;
+    font-weight: 800;
 }
 
 .admin-layout {
