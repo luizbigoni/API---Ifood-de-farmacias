@@ -18,6 +18,10 @@ createApp({
             farmaciaSelecionada: '',
             mensagemProdutos: '',
             mensagemCarrinho: '',
+            iaTexto: '',
+            iaCarregando: false,
+            iaResultado: null,
+            iaMensagens: [],
             mostrarPedidos: false,
             editandoPerfil: false,
             pedidos: [],
@@ -42,7 +46,8 @@ createApp({
                 'Gripe',
                 'Vitaminas',
                 'Primeiros socorros',
-                'Higiene'
+                'Higiene',
+                'Geral'
             ]
         };
     },
@@ -213,6 +218,58 @@ createApp({
             this.carrinho = dados.carrinho;
         },
 
+        async enviarSintomas() {
+            const texto = this.iaTexto.trim();
+
+            if (!texto) {
+                return;
+            }
+
+            this.iaMensagens.push({
+                autor: 'cliente',
+                texto
+            });
+            this.iaTexto = '';
+            this.iaCarregando = true;
+
+            try {
+                const resposta = await fetch('/ia/sintomas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mensagem: texto })
+                });
+
+                const dados = await resposta.json();
+
+                if (!resposta.ok) {
+                    this.iaMensagens.push({
+                        autor: 'ia',
+                        texto: dados.message || 'Nao foi possivel analisar seus sintomas agora.'
+                    });
+                    return;
+                }
+
+                this.iaResultado = dados;
+                this.iaMensagens.push({
+                    autor: 'ia',
+                    texto: `${dados.resposta} Categorias sugeridas: ${dados.categorias.join(', ')}.`
+                });
+            } catch (error) {
+                this.iaMensagens.push({
+                    autor: 'ia',
+                    texto: 'Nao foi possivel conectar ao assistente de IA agora.'
+                });
+            } finally {
+                this.iaCarregando = false;
+            }
+        },
+
+        aplicarCategoriaIA(categoria) {
+            this.categoriaSelecionada = categoria;
+            this.busca = '';
+            this.mensagemProdutos = `Filtro aplicado pela IA: ${categoria}`;
+        },
+
         async removerDoCarrinho(produtoId) {
             const resposta = await fetch(`/clientes/${this.clienteId}/carrinho/produtos/${produtoId}`, {
                 method: 'DELETE'
@@ -310,6 +367,10 @@ createApp({
         },
 
         categoriaDoProduto(produto) {
+            if (produto.categoria) {
+                return produto.categoria;
+            }
+
             const texto = `${produto.nome || ''} ${produto.descricao || ''}`.toLowerCase();
 
             if (texto.includes('gripe') || texto.includes('tosse') || texto.includes('resfriado')) {
@@ -328,7 +389,7 @@ createApp({
                 return 'Higiene';
             }
 
-            return 'Dor e febre';
+            return 'Geral';
         },
 
         iconeProduto(produto) {
@@ -353,8 +414,8 @@ createApp({
             return 'Rx';
         },
 
-        fotoProduto() {
-            return '/img/medicamentos.png';
+        fotoProduto(produto) {
+            return produto.imagem || '/img/medicamentos.png';
         },
 
         classeFotoProduto(produto) {

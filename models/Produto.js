@@ -3,13 +3,17 @@ import ProdutoModel from "./ProdutoSchema.js";
 class Produto {
     #nome;
     #descricao;
+    #categoria;
+    #imagem;
     #preco;
     #quantidade;
     #farmacia;
 
-    constructor(nome, descricao, preco, quantidade, farmacia) {
+    constructor(nome, descricao, preco, quantidade, farmacia, categoria = 'Geral', imagem = '') {
         this.#nome = nome;
         this.#descricao = descricao;
+        this.#categoria = categoria;
+        this.#imagem = imagem;
         this.#preco = preco;
         this.#quantidade = quantidade;
         this.#farmacia = farmacia;
@@ -29,6 +33,22 @@ class Produto {
 
     setDescricao(descricao) {
         this.#descricao = descricao;
+    }
+
+    getCategoria() {
+        return this.#categoria;
+    }
+
+    setCategoria(categoria) {
+        this.#categoria = categoria;
+    }
+
+    getImagem() {
+        return this.#imagem;
+    }
+
+    setImagem(imagem) {
+        this.#imagem = imagem;
     }
 
     getPreco() {
@@ -63,6 +83,8 @@ class Produto {
         const novoProduto = new ProdutoModel({
             nome: produto.getNome(),
             descricao: produto.getDescricao(),
+            categoria: produto.getCategoria(),
+            imagem: produto.getImagem(),
             preco: produto.getPreco(),
             quantidade: produto.getQuantidade(),
             farmacia: produto.getFarmacia(),

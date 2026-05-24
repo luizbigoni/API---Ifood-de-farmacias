@@ -10,6 +10,14 @@ createApp({
             editandoPerfil: false,
             editando: false,
             produtoEditandoId: '',
+            categorias: [
+                'Dor e febre',
+                'Gripe',
+                'Vitaminas',
+                'Primeiros socorros',
+                'Higiene',
+                'Geral'
+            ],
             formFarmacia: {
                 nome: '',
                 cnpj: '',
@@ -30,6 +38,9 @@ createApp({
             form: {
                 nome: '',
                 descricao: '',
+                categoria: 'Geral',
+                foto: null,
+                imagemAtual: '',
                 preco: 0,
                 quantidade: 0,
                 farmacia: ''
@@ -108,11 +119,22 @@ createApp({
 
             const url = this.editando ? `/produtos/${this.produtoEditandoId}` : '/produtos';
             const metodo = this.editando ? 'PUT' : 'POST';
+            const dadosProduto = new FormData();
+
+            dadosProduto.append('nome', this.form.nome);
+            dadosProduto.append('descricao', this.form.descricao);
+            dadosProduto.append('categoria', this.form.categoria);
+            dadosProduto.append('preco', this.form.preco);
+            dadosProduto.append('quantidade', this.form.quantidade);
+            dadosProduto.append('farmacia', this.form.farmacia);
+
+            if (this.form.foto) {
+                dadosProduto.append('foto', this.form.foto);
+            }
 
             const resposta = await fetch(url, {
                 method: metodo,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(this.form)
+                body: dadosProduto
             });
 
             const dados = await resposta.json();
@@ -172,10 +194,17 @@ createApp({
             this.form = {
                 nome: produto.nome,
                 descricao: produto.descricao,
+                categoria: produto.categoria || 'Geral',
+                foto: null,
+                imagemAtual: produto.imagem || '',
                 preco: produto.preco,
                 quantidade: produto.quantidade,
                 farmacia: produto.farmacia && (produto.farmacia._id || produto.farmacia)
             };
+
+            if (this.$refs.fotoProduto) {
+                this.$refs.fotoProduto.value = '';
+            }
         },
 
         async excluirProduto(produtoId) {
@@ -203,10 +232,26 @@ createApp({
             this.form = {
                 nome: '',
                 descricao: '',
+                categoria: 'Geral',
+                foto: null,
+                imagemAtual: '',
                 preco: 0,
                 quantidade: 0,
                 farmacia: this.farmaciaId || this.form.farmacia
             };
+
+            if (this.$refs.fotoProduto) {
+                this.$refs.fotoProduto.value = '';
+            }
+        },
+
+        selecionarFoto(event) {
+            const arquivo = event.target.files && event.target.files[0];
+            this.form.foto = arquivo || null;
+        },
+
+        fotoProduto(produto) {
+            return produto.imagem || '/img/medicamentos.png';
         },
 
         sair() {

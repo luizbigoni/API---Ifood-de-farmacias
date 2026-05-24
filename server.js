@@ -1,7 +1,5 @@
 import 'dotenv/config'; //ou import dotenv from 'dotenv'; dotenv.config(); ->depois de todas as importações
 import express from 'express'
-import path from 'path'
-import __dirname from './utils/pathUtils.js'
 import {
     staticMiddleware,
     urlencodedMiddleware,
@@ -17,8 +15,6 @@ import Database from './config/db.js';
 const app = express();
 const port = process.env.PORT || 3000;
 Database.connect();
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'ejs');
 app.use(staticMiddleware);
 app.use(urlencodedMiddleware);
 app.use(jsonMiddleware);

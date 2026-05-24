@@ -23,11 +23,21 @@ function querHtml(req) {
 }
 
 function renderizarErroLogin(req, res, tipo, message, status = 400) {
-    const view = tipo === 'farmacia' ? 'login-farmacia' : 'login-cliente';
-    return res.status(status).render(view, {
-        title: tipo === 'farmacia' ? 'Login da Farmacia' : 'Login do Cliente',
-        message
-    });
+    if (!querHtml(req)) {
+        return res.status(status).json({ message });
+    }
+
+    const destino = tipo === 'farmacia' ? '/login/farmacia' : '/login/cliente';
+    return res.redirect(`${destino}?erro=${encodeURIComponent(message)}`);
+}
+
+function responderErroCadastro(req, res, view, title, message, status = 400) {
+    if (!querHtml(req)) {
+        return res.status(status).json({ message });
+    }
+
+    const destino = view === 'cadastro-farmacia' ? '/cadastro/farmacia' : '/cadastro/cliente';
+    return res.redirect(`${destino}?erro=${encodeURIComponent(message)}`);
 }
 
 function responderCadastro(req, res, usuario, tipo) {
@@ -47,31 +57,19 @@ function responderCadastro(req, res, usuario, tipo) {
 
 class AuthController {
     static renderLoginCliente(req, res) {
-        return res.render('login-cliente', {
-            title: 'Login do Cliente',
-            message: req.query.cadastro === 'sucesso' ? 'Cadastro realizado. Entre com seu email e senha.' : null
-        });
+        return res.redirect('/login/cliente');
     }
 
     static renderLoginFarmacia(req, res) {
-        return res.render('login-farmacia', {
-            title: 'Login da Farmacia',
-            message: req.query.cadastro === 'sucesso' ? 'Cadastro realizado. Entre com seu email e senha.' : null
-        });
+        return res.redirect('/login/farmacia');
     }
 
     static renderCadastroCliente(req, res) {
-        return res.render('cadastro-cliente', {
-            title: 'Cadastro do Cliente',
-            message: null
-        });
+        return res.redirect('/cadastro/cliente');
     }
 
     static renderCadastroFarmacia(req, res) {
-        return res.render('cadastro-farmacia', {
-            title: 'Cadastro da Farmacia',
-            message: null
-        });
+        return res.redirect('/cadastro/farmacia');
     }
 
     static async loginCliente(req, res) {
@@ -172,17 +170,11 @@ class AuthController {
             ]);
 
             if (clienteCpfExistente) {
-                return res.status(400).render('cadastro-cliente', {
-                    title: 'Cadastro do Cliente',
-                    message: 'Ja existe um cliente com esse CPF.'
-                });
+                return responderErroCadastro(req, res, 'cadastro-cliente', 'Cadastro do Cliente', 'Ja existe um cliente com esse CPF.');
             }
 
             if (clienteEmailExistente || farmaciaEmailExistente) {
-                return res.status(400).render('cadastro-cliente', {
-                    title: 'Cadastro do Cliente',
-                    message: 'Ja existe uma conta cadastrada com esse email.'
-                });
+                return responderErroCadastro(req, res, 'cadastro-cliente', 'Cadastro do Cliente', 'Ja existe uma conta cadastrada com esse email.');
             }
 
             const novoCliente = new Cliente(nome, cpf, email, senha, telefone, endereco);
@@ -190,10 +182,7 @@ class AuthController {
             return responderCadastro(req, res, clienteSalvo, 'cliente');
         } catch (error) {
             console.error('Erro ao cadastrar cliente pelo login:', error);
-            return res.status(400).render('cadastro-cliente', {
-                title: 'Cadastro do Cliente',
-                message: 'Nao foi possivel cadastrar o cliente. Confira os dados informados.'
-            });
+            return responderErroCadastro(req, res, 'cadastro-cliente', 'Cadastro do Cliente', 'Nao foi possivel cadastrar o cliente. Confira os dados informados.');
         }
     }
 
@@ -210,17 +199,11 @@ class AuthController {
             ]);
 
             if (farmaciaCnpjExistente) {
-                return res.status(400).render('cadastro-farmacia', {
-                    title: 'Cadastro da Farmacia',
-                    message: 'Ja existe uma farmacia com esse CNPJ.'
-                });
+                return responderErroCadastro(req, res, 'cadastro-farmacia', 'Cadastro da Farmacia', 'Ja existe uma farmacia com esse CNPJ.');
             }
 
             if (farmaciaEmailExistente || clienteEmailExistente) {
-                return res.status(400).render('cadastro-farmacia', {
-                    title: 'Cadastro da Farmacia',
-                    message: 'Ja existe uma conta cadastrada com esse email.'
-                });
+                return responderErroCadastro(req, res, 'cadastro-farmacia', 'Cadastro da Farmacia', 'Ja existe uma conta cadastrada com esse email.');
             }
 
             const novaFarmacia = new Farmacia(nome, cnpj, email, senha, telefone, Number(taxaEntrega), aberta, endereco);
@@ -228,10 +211,7 @@ class AuthController {
             return responderCadastro(req, res, farmaciaSalva, 'farmacia');
         } catch (error) {
             console.error('Erro ao cadastrar farmacia pelo login:', error);
-            return res.status(400).render('cadastro-farmacia', {
-                title: 'Cadastro da Farmacia',
-                message: 'Nao foi possivel cadastrar a farmacia. Confira os dados informados.'
-            });
+            return responderErroCadastro(req, res, 'cadastro-farmacia', 'Cadastro da Farmacia', 'Nao foi possivel cadastrar a farmacia. Confira os dados informados.');
         }
     }
 }

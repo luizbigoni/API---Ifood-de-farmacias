@@ -5,6 +5,8 @@ import mongoose from 'mongoose';
 const camposPermitidos = [
     'nome',
     'descricao',
+    'categoria',
+    'imagem',
     'preco',
     'quantidade',
     'farmacia'
@@ -78,14 +80,15 @@ class ProdutoController {
 
     static async createProduto(req, res) {
         try {
-            const { nome, descricao, preco, quantidade, farmacia } = req.body;
+            const { nome, descricao, preco, quantidade, farmacia, categoria } = req.body;
+            const imagem = req.file ? `/uploads/produtos/${req.file.filename}` : '';
             const farmaciaExistente = await Farmacia.findById(farmacia);
 
             if (!farmaciaExistente) {
                 return res.status(404).json({ message: 'Farmacia nao encontrada para vincular ao produto' });
             }
 
-            const novoProduto = new Produto(nome, descricao, preco, quantidade, farmacia);
+            const novoProduto = new Produto(nome, descricao, preco, quantidade, farmacia, categoria, imagem);
             const produtoSalvo = await novoProduto.save();
 
             return res.status(201).json(produtoSalvo);
@@ -99,6 +102,10 @@ class ProdutoController {
         try {
             const { id } = req.params;
             const dadosAtualizacao = filtrarCamposPermitidos(req.body);
+
+            if (req.file) {
+                dadosAtualizacao.imagem = `/uploads/produtos/${req.file.filename}`;
+            }
 
             if (dadosAtualizacao.farmacia) {
                 const farmaciaExistente = await Farmacia.findById(dadosAtualizacao.farmacia);
