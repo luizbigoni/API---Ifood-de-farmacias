@@ -1,49 +1,8 @@
 import Produto from '../models/Produto.js';
 
-const categoriasSintomas = [
-    {
-        categoria: 'Dor e febre',
-        termos: ['dor', 'febre', 'enxaqueca', 'cabeca', 'cabeca', 'colica', 'mal estar', 'calafrio'],
-        orientacao: 'Pode estar relacionado a dor ou febre. A IA pode indicar categorias de venda livre, mas a escolha deve considerar alergias, idade, doencas existentes e medicamentos em uso.'
-    },
-    {
-        categoria: 'Gripe',
-        termos: ['gripe', 'tosse', 'resfriado', 'nariz', 'coriza', 'garganta', 'espirro', 'congestao'],
-        orientacao: 'Os sintomas lembram quadros respiratorios comuns. Hidratacao e repouso ajudam, mas febre persistente ou piora precisam de avaliacao profissional.'
-    },
-    {
-        categoria: 'Primeiros socorros',
-        termos: ['corte', 'ferida', 'machucado', 'queimadura', 'curativo', 'sangramento', 'arranhao'],
-        orientacao: 'Pode ser um caso de cuidado local. Produtos de primeiros socorros podem ajudar, mas feridas profundas, queimaduras extensas ou sangramento importante precisam de atendimento.'
-    },
-    {
-        categoria: 'Vitaminas',
-        termos: ['cansaco', 'fraqueza', 'vitamina', 'imunidade', 'disposicao', 'suplemento'],
-        orientacao: 'Cansaco e fraqueza podem ter muitas causas. Suplementos so fazem sentido quando ha necessidade real, preferencialmente com orientacao profissional.'
-    },
-    {
-        categoria: 'Higiene',
-        termos: ['higiene', 'pele', 'oleosidade', 'caspa', 'sabonete', 'shampoo', 'dermatite'],
-        orientacao: 'Parece envolver cuidado de higiene ou pele. Produtos de cuidado pessoal podem ajudar, mas irritacoes intensas ou persistentes devem ser avaliadas.'
-    }
-];
-
-const sinaisAlerta = [
-    'falta de ar',
-    'dor no peito',
-    'desmaio',
-    'convulsao',
-    'sangramento intenso',
-    'febre alta',
-    'febre ha mais de 3 dias',
-    'rigidez na nuca',
-    'confusao',
-    'gravida',
-    'gravidez',
-    'bebe',
-    'crianca pequena',
-    'alergia grave'
-];
+const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2:3b';
+const categoriasPermitidas = ['Dor e febre', 'Gripe', 'Vitaminas', 'Primeiros socorros', 'Higiene', 'Geral'];
 
 const perguntasSeguranca = [
     'Voce tem alergia a algum medicamento?',
@@ -59,18 +18,8 @@ function normalizar(texto) {
         .replace(/[\u0300-\u036f]/g, '');
 }
 
-function identificarCategorias(mensagemNormalizada) {
-    return categoriasSintomas.filter((grupo) => {
-        return grupo.termos.some((termo) => mensagemNormalizada.includes(normalizar(termo)));
-    });
-}
-
-function identificarAlertas(mensagemNormalizada) {
-    return sinaisAlerta.filter((alerta) => mensagemNormalizada.includes(normalizar(alerta)));
-}
-
 function categoriaDoProduto(produto) {
-    if (produto.categoria) {
+    if (produto.categoria && produto.categoria !== 'Geral') {
         return produto.categoria;
     }
 
@@ -116,6 +65,96 @@ function categoriaDoProduto(produto) {
     return 'Geral';
 }
 
+function limparCategorias(categorias) {
+    const categoriasRecebidas = Array.isArray(categorias) ? categorias : [];
+    const categoriasValidas = categoriasRecebidas.filter((categoria) => {
+        return categoriasPermitidas.includes(categoria);
+    });
+
+    return categoriasValidas.length ? categoriasValidas : ['Geral'];
+}
+
+function extrairJson(texto) {
+    const conteudo = String(texto || '').trim();
+
+    try {
+        return JSON.parse(conteudo);
+    } catch {
+        const inicio = conteudo.indexOf('{');
+        const fim = conteudo.lastIndexOf('}');
+
+        if (inicio >= 0 && fim > inicio) {
+            return JSON.parse(conteudo.slice(inicio, fim + 1));
+        }
+
+        throw new Error('OLLAMA_JSON_INVALIDO');
+    }
+}
+
+function montarPromptUsuario(mensagem) {
+    return [
+        'Mensagem do cliente:',
+        mensagem,
+        '',
+        'Categorias disponiveis no catalogo:',
+        categoriasPermitidas.join(', '),
+        '',
+        'Responda somente em JSON valido no seguinte formato:',
+        '{',
+        '  "resposta": "texto curto em portugues do Brasil",',
+        '  "risco": "baixo ou alto",',
+        '  "categorias": ["uma ou mais categorias disponiveis"],',
+        '  "alertas": ["sinais de alerta encontrados"],',
+        '  "orientacoes": ["orientacoes curtas e seguras"],',
+        '  "perguntasSeguranca": ["perguntas importantes antes de comprar"]',
+        '}'
+    ].join('\n');
+}
+
+async function analisarComOllama(mensagem) {
+    const resposta = await fetch(`${OLLAMA_URL}/api/chat`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            model: OLLAMA_MODEL,
+            stream: false,
+            format: 'json',
+            messages: [
+                {
+                    role: 'system',
+                    content: [
+                        'Voce e um assistente generativo de triagem inicial para uma farmacia online.',
+                        'Nao faca diagnostico, nao prometa cura e nao prescreva medicamentos controlados.',
+                        'Se houver sinais graves como falta de ar, dor no peito, desmaio, convulsao, febre alta persistente, rigidez na nuca, gravidez, bebe ou alergia grave, marque risco como alto e recomende atendimento medico/farmaceutico.',
+                        'Use apenas as categorias informadas pelo sistema.',
+                        'Mantenha a resposta curta, clara e em portugues do Brasil.'
+                    ].join(' ')
+                },
+                {
+                    role: 'user',
+                    content: montarPromptUsuario(mensagem)
+                }
+            ],
+            options: {
+                temperature: 0.2
+            }
+        })
+    });
+
+    const dados = await resposta.json();
+
+    if (!resposta.ok) {
+        console.error('Erro do Ollama:', dados);
+        const error = new Error('OLLAMA_ERRO');
+        error.status = resposta.status;
+        throw error;
+    }
+
+    return extrairJson(dados.message?.content);
+}
+
 class IAController {
     static async analisarSintomas(req, res) {
         try {
@@ -128,36 +167,33 @@ class IAController {
                 });
             }
 
-            const alertasEncontrados = identificarAlertas(mensagemNormalizada);
-            const categoriasEncontradas = identificarCategorias(mensagemNormalizada);
-            const categorias = categoriasEncontradas.length
-                ? categoriasEncontradas.map((grupo) => grupo.categoria)
-                : ['Dor e febre'];
+            const analise = await analisarComOllama(mensagem);
+            const categorias = limparCategorias(analise.categorias);
 
             const produtos = await Produto.findAll();
             const produtosSugeridos = produtos
                 .filter((produto) => categorias.includes(categoriaDoProduto(produto)))
                 .slice(0, 6);
 
-            const risco = alertasEncontrados.length ? 'alto' : 'baixo';
-            const orientacoes = categoriasEncontradas.map((grupo) => grupo.orientacao);
-            const resposta = alertasEncontrados.length
-                ? 'Encontrei sinais de alerta na sua descricao. Procure atendimento medico ou um farmaceutico antes de comprar qualquer medicamento.'
-                : 'Posso te orientar de forma inicial, mas nao faco diagnostico e nao substituo medico ou farmaceutico. Pelos sintomas informados, estas categorias podem ser relevantes.';
-
             return res.json({
-                resposta,
-                risco,
+                resposta: analise.resposta,
+                risco: analise.risco,
                 categorias,
-                alertas: alertasEncontrados,
-                orientacoes: orientacoes.length ? orientacoes : [
-                    'Nao consegui identificar uma categoria especifica. Se os sintomas persistirem ou piorarem, procure orientacao profissional.'
-                ],
-                perguntasSeguranca,
+                alertas: Array.isArray(analise.alertas) ? analise.alertas : [],
+                orientacoes: Array.isArray(analise.orientacoes) ? analise.orientacoes : [],
+                perguntasSeguranca: Array.isArray(analise.perguntasSeguranca) && analise.perguntasSeguranca.length
+                    ? analise.perguntasSeguranca
+                    : perguntasSeguranca,
                 produtosSugeridos
             });
         } catch (error) {
             console.error('Erro ao analisar sintomas com IA:', error);
+            if (error.cause?.code === 'ECONNREFUSED' || error.message === 'fetch failed') {
+                return res.status(503).json({
+                    message: 'Ollama nao esta rodando. Abra o Ollama e confira OLLAMA_URL no arquivo .env.'
+                });
+            }
+
             return res.status(500).json({ message: 'Erro interno ao analisar sintomas' });
         }
     }
