@@ -40,24 +40,35 @@ const urlCliente = computed(() => clienteId.value ? `/frontend/cliente?id=${clie
 const urlFarmaciaLogada = computed(() => farmaciaLogadaId.value ? `/frontend/farmacia?id=${farmaciaLogadaId.value}` : '/login');
 
 const farmaciasFiltradas = computed(() => {
-    const termo = busca.value.toLowerCase().trim();
-    return termo ? farmacias.value.filter((farmacia) => String(farmacia.nome || '').toLowerCase().includes(termo)) : farmacias.value;
+    const termo = normalizar(busca.value);
+    return termo ? farmacias.value.filter((farmacia) => normalizar(farmacia.nome).includes(termo)) : farmacias.value;
 });
 
 const produtosFiltrados = computed(() => {
-    const termo = busca.value.toLowerCase().trim();
+    const termo = normalizar(busca.value);
+    const categoriaFiltro = normalizar(categoriaSelecionada.value);
+    const farmaciaFiltro = String(farmaciaSelecionada.value || '');
+
     return produtos.value.filter((produto) => {
-        const nome = String(produto.nome || '').toLowerCase();
-        const descricao = String(produto.descricao || '').toLowerCase();
-        const farmacia = nomeFarmacia(produto.farmacia).toLowerCase();
+        const nome = normalizar(produto.nome);
+        const descricao = normalizar(produto.descricao);
+        const farmacia = normalizar(nomeFarmacia(produto.farmacia));
         const categoriaProduto = categoriaDoProduto(produto);
         const farmaciaProduto = produto.farmacia && (produto.farmacia._id || produto.farmacia);
         const bateBusca = !termo || nome.includes(termo) || descricao.includes(termo) || farmacia.includes(termo);
-        const bateCategoria = !categoriaSelecionada.value || categoriaProduto === categoriaSelecionada.value;
-        const bateFarmacia = !farmaciaSelecionada.value || farmaciaProduto === farmaciaSelecionada.value;
+        const bateCategoria = !categoriaFiltro || normalizar(categoriaProduto) === categoriaFiltro;
+        const bateFarmacia = !farmaciaFiltro || String(farmaciaProduto || '') === farmaciaFiltro;
         return bateBusca && bateCategoria && bateFarmacia;
     });
 });
+
+function normalizar(texto) {
+    return String(texto || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim();
+}
 
 function dinheiro(valor) {
     return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -79,6 +90,71 @@ function formatarEndereco(endereco) {
 }
 
 function categoriaDoProduto(produto) {
+    if (produto.categoria && produto.categoria !== 'Geral') {
+        return produto.categoria;
+    }
+
+    const texto = normalizar(`${produto.nome || ''} ${produto.descricao || ''}`);
+
+    if (
+        texto.includes('gripe') ||
+        texto.includes('tosse') ||
+        texto.includes('resfriado') ||
+        texto.includes('coriza') ||
+        texto.includes('garganta') ||
+        texto.includes('espirro') ||
+        texto.includes('congestao')
+    ) {
+        return 'Gripe';
+    }
+
+    if (
+        texto.includes('dipirona') ||
+        texto.includes('paracetamol') ||
+        texto.includes('ibuprofeno') ||
+        texto.includes('dorflex') ||
+        texto.includes('dor') ||
+        texto.includes('febre') ||
+        texto.includes('colica') ||
+        texto.includes('calafrio') ||
+        texto.includes('analgesico') ||
+        texto.includes('antitermico')
+    ) {
+        return 'Dor e febre';
+    }
+
+    if (
+        texto.includes('vitamina') ||
+        texto.includes('suplemento') ||
+        texto.includes('imunidade') ||
+        texto.includes('cansaco') ||
+        texto.includes('fraqueza')
+    ) {
+        return 'Vitaminas';
+    }
+
+    if (
+        texto.includes('curativo') ||
+        texto.includes('gaze') ||
+        texto.includes('alcool') ||
+        texto.includes('ferida') ||
+        texto.includes('corte') ||
+        texto.includes('machucado') ||
+        texto.includes('queimadura')
+    ) {
+        return 'Primeiros socorros';
+    }
+
+    if (
+        texto.includes('shampoo') ||
+        texto.includes('sabonete') ||
+        texto.includes('higiene') ||
+        texto.includes('pele') ||
+        texto.includes('soro fisiologico')
+    ) {
+        return 'Higiene';
+    }
+
     return produto.categoria || 'Geral';
 }
 
