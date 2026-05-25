@@ -99,10 +99,39 @@ class Cliente {
         return await ClienteModel.findOne({ email: String(email || '').trim().toLowerCase() });
     }
 
+    static async findByResetSenhaTokenHash(tokenHash) {
+        return await ClienteModel.findOne({
+            resetSenhaTokenHash: tokenHash,
+            resetSenhaExpiraEm: { $gt: new Date() }
+        });
+    }
+
     static async update(id, dadosCliente) {
         return await ClienteModel.findByIdAndUpdate(
             id,
             dadosCliente,
+            { new: true, runValidators: true }
+        );
+    }
+
+    static async definirTokenRecuperacao(id, tokenHash, expiraEm) {
+        return await ClienteModel.findByIdAndUpdate(
+            id,
+            {
+                resetSenhaTokenHash: tokenHash,
+                resetSenhaExpiraEm: expiraEm
+            },
+            { new: true }
+        );
+    }
+
+    static async atualizarSenhaRecuperada(id, senhaHash) {
+        return await ClienteModel.findByIdAndUpdate(
+            id,
+            {
+                $set: { senha: senhaHash },
+                $unset: { resetSenhaTokenHash: '', resetSenhaExpiraEm: '' }
+            },
             { new: true, runValidators: true }
         );
     }

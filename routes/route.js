@@ -69,6 +69,10 @@ router.get('/cadastro/cliente', enviarVueApp);
 router.get('/cadastro/farmacia', enviarVueApp);
 router.post('/cadastro/cliente', AuthController.cadastrarCliente);
 router.post('/cadastro/farmacia', AuthController.cadastrarFarmacia);
+router.get('/recuperar-senha', enviarVueApp);
+router.get('/redefinir-senha', enviarVueApp);
+router.post('/recuperar-senha', AuthController.solicitarRecuperacaoSenha);
+router.post('/redefinir-senha', AuthController.redefinirSenha);
 
 // Assistente de IA para orientacao inicial de sintomas
 router.post('/ia/sintomas', IAController.analisarSintomas);

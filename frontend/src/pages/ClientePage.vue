@@ -17,8 +17,24 @@ const iaTexto = ref('');
 const iaCarregando = ref(false);
 const iaResultado = ref(null);
 const iaMensagens = ref([]);
+const editandoPerfil = ref(false);
 const carrinho = ref({ itens: [], quantidadeTotal: 0, valorTotal: 0 });
 const quantidades = reactive({});
+const formCliente = reactive({
+    nome: '',
+    cpf: '',
+    email: '',
+    senha: '',
+    telefone: '',
+    endereco: {
+        cep: '',
+        rua: '',
+        numero: '',
+        bairro: '',
+        cidade: '',
+        estado: ''
+    }
+});
 
 const urlCliente = computed(() => clienteId.value ? `/frontend/cliente?id=${clienteId.value}` : '/frontend/cliente');
 const urlFarmaciaLogada = computed(() => farmaciaLogadaId.value ? `/frontend/farmacia?id=${farmaciaLogadaId.value}` : '/login');
@@ -83,7 +99,25 @@ async function carregarCliente() {
     const resposta = await fetch(`/clientes/${clienteId.value}`);
     if (resposta.ok) {
         cliente.value = await resposta.json();
+        preencherFormCliente();
     }
+}
+
+function preencherFormCliente() {
+    const endereco = cliente.value.endereco || {};
+    formCliente.nome = cliente.value.nome || '';
+    formCliente.cpf = cliente.value.cpf || '';
+    formCliente.email = cliente.value.email || '';
+    formCliente.senha = '';
+    formCliente.telefone = cliente.value.telefone || '';
+    formCliente.endereco = {
+        cep: endereco.cep || '',
+        rua: endereco.rua || '',
+        numero: endereco.numero || '',
+        bairro: endereco.bairro || '',
+        cidade: endereco.cidade || '',
+        estado: endereco.estado || ''
+    };
 }
 
 async function carregarCarrinho() {
@@ -177,6 +211,42 @@ function aplicarCategoriaIA(categoria) {
     mensagemProdutos.value = `Filtro aplicado pela IA: ${categoria}`;
 }
 
+function abrirEdicaoCliente() {
+    preencherFormCliente();
+    editandoPerfil.value = true;
+}
+
+async function salvarCliente() {
+    const dadosCliente = {
+        nome: formCliente.nome,
+        cpf: formCliente.cpf,
+        email: formCliente.email,
+        telefone: formCliente.telefone,
+        endereco: formCliente.endereco
+    };
+
+    if (formCliente.senha) {
+        dadosCliente.senha = formCliente.senha;
+    }
+
+    const resposta = await fetch(`/clientes/${clienteId.value}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dadosCliente)
+    });
+    const dados = await resposta.json();
+
+    if (!resposta.ok) {
+        mensagemCarrinho.value = dados.message || 'Nao foi possivel atualizar seus dados.';
+        return;
+    }
+
+    cliente.value = dados;
+    preencherFormCliente();
+    editandoPerfil.value = false;
+    mensagemCarrinho.value = 'Dados atualizados com sucesso.';
+}
+
 function sair() {
     localStorage.removeItem('healthDeliveryClienteId');
     localStorage.removeItem('healthDeliveryFarmaciaId');
@@ -209,7 +279,7 @@ onMounted(async () => {
             </div>
             <details class="perfil-menu" v-if="clienteId">
                 <summary><span class="perfil-avatar">{{ iniciais(cliente.nome) }}</span><span>{{ cliente.nome || 'Carregando perfil' }}</span></summary>
-                <div class="perfil-dropdown"><button type="button" @click="sair">Sair</button></div>
+                <div class="perfil-dropdown"><button type="button" @click="abrirEdicaoCliente">Editar dados</button><button type="button" @click="sair">Sair</button></div>
             </details>
             <nav class="topo-acoes" v-else>
                 <template v-if="!farmaciaLogadaId"><a href="/login/cliente">Cliente</a><a href="/login/farmacia">Farmacia</a></template>
@@ -292,5 +362,38 @@ onMounted(async () => {
                 <p class="mensagem mensagem-carrinho" v-if="mensagemCarrinho">{{ mensagemCarrinho }}</p>
             </aside>
         </main>
+
+        <div class="modal-backdrop" v-if="editandoPerfil">
+            <section class="modal">
+                <div class="section-heading">
+                    <h2>Editar cliente</h2>
+                    <button type="button" class="botao-fechar" @click="editandoPerfil = false">Fechar</button>
+                </div>
+                <form class="perfil-form" @submit.prevent="salvarCliente">
+                    <div class="form-duas-colunas">
+                        <label>Nome<input type="text" v-model="formCliente.nome" required></label>
+                        <label>CPF<input type="text" v-model="formCliente.cpf" required></label>
+                    </div>
+                    <div class="form-duas-colunas">
+                        <label>Email<input type="email" v-model="formCliente.email" required></label>
+                        <label>Telefone<input type="tel" v-model="formCliente.telefone" required></label>
+                    </div>
+                    <label>Nova senha<input type="password" v-model="formCliente.senha" placeholder="Deixe vazio para manter"></label>
+                    <div class="form-duas-colunas">
+                        <label>CEP<input type="text" v-model="formCliente.endereco.cep" required></label>
+                        <label>Rua<input type="text" v-model="formCliente.endereco.rua" required></label>
+                    </div>
+                    <div class="form-duas-colunas">
+                        <label>Numero<input type="text" v-model="formCliente.endereco.numero" required></label>
+                        <label>Bairro<input type="text" v-model="formCliente.endereco.bairro" required></label>
+                    </div>
+                    <div class="form-duas-colunas">
+                        <label>Cidade<input type="text" v-model="formCliente.endereco.cidade" required></label>
+                        <label>Estado<input type="text" v-model="formCliente.endereco.estado" required></label>
+                    </div>
+                    <button type="submit" class="botao-principal">Salvar alteracoes</button>
+                </form>
+            </section>
+        </div>
     </div>
 </template>

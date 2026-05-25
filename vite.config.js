@@ -17,6 +17,8 @@ export default defineConfig({
             '/carrinhos': 'http://localhost:3000',
             '/login': 'http://localhost:3000',
             '/cadastro': 'http://localhost:3000',
+            '/recuperar-senha': 'http://localhost:3000',
+            '/redefinir-senha': 'http://localhost:3000',
             '/ia': 'http://localhost:3000'
         }
     }

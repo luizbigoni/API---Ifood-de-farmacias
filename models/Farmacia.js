@@ -122,10 +122,39 @@ class Farmacia {
         return await FarmaciaModel.findOne({ email: String(email || '').trim().toLowerCase() });
     }
 
+    static async findByResetSenhaTokenHash(tokenHash){
+        return await FarmaciaModel.findOne({
+            resetSenhaTokenHash: tokenHash,
+            resetSenhaExpiraEm: { $gt: new Date() }
+        });
+    }
+
     static async update(id, dadosFarmacia){
         return await FarmaciaModel.findByIdAndUpdate(
             id,
             dadosFarmacia,
+            { new: true, runValidators: true }
+        );
+    }
+
+    static async definirTokenRecuperacao(id, tokenHash, expiraEm){
+        return await FarmaciaModel.findByIdAndUpdate(
+            id,
+            {
+                resetSenhaTokenHash: tokenHash,
+                resetSenhaExpiraEm: expiraEm
+            },
+            { new: true }
+        );
+    }
+
+    static async atualizarSenhaRecuperada(id, senhaHash){
+        return await FarmaciaModel.findByIdAndUpdate(
+            id,
+            {
+                $set: { senha: senhaHash },
+                $unset: { resetSenhaTokenHash: '', resetSenhaExpiraEm: '' }
+            },
             { new: true, runValidators: true }
         );
     }

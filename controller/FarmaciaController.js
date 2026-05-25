@@ -3,6 +3,7 @@ import __dirname from '../utils/pathUtils.js';
 import Farmacia from '../models/Farmacia.js';
 import Cliente from '../models/Cliente.js';
 import mongoose from 'mongoose';
+import { gerarHashSenha } from '../utils/passwordUtils.js';
 
 const camposPermitidos = [
     'nome',
@@ -88,7 +89,8 @@ class FarmaciaController {
                 return res.status(400).json({ message: 'Ja existe um cliente com esse email' });
             }
 
-            const novaFarmacia = new Farmacia(nome, cnpj, email, senha, telefone, taxaEntrega, aberta, endereco);
+            const senhaHash = await gerarHashSenha(senha);
+            const novaFarmacia = new Farmacia(nome, cnpj, email, senhaHash, telefone, taxaEntrega, aberta, endereco);
             const farmaciaSalva = await novaFarmacia.save();
 
             return res.status(201).json(farmaciaSalva);
@@ -102,6 +104,12 @@ class FarmaciaController {
         try {
             const { id } = req.params;
             const dadosAtualizacao = filtrarCamposPermitidos(req.body);
+
+            if (dadosAtualizacao.senha !== undefined && String(dadosAtualizacao.senha).trim()) {
+                dadosAtualizacao.senha = await gerarHashSenha(dadosAtualizacao.senha);
+            } else {
+                delete dadosAtualizacao.senha;
+            }
 
             if (dadosAtualizacao.email) {
                 const clienteEmailExistente = await Cliente.findByEmail(dadosAtualizacao.email);

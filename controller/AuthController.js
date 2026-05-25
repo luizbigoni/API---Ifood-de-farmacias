@@ -1,8 +1,15 @@
 import Cliente from '../models/Cliente.js';
 import Farmacia from '../models/Farmacia.js';
+import {
+    gerarHashSenha,
+    verificarSenha,
+    gerarTokenRecuperacao,
+    gerarHashToken
+} from '../utils/passwordUtils.js';
 
 const CLIENTE_REDIRECT = process.env.CLIENTE_FRONTEND_URL || '/frontend/cliente';
 const FARMACIA_REDIRECT = process.env.FARMACIA_FRONTEND_URL || '/frontend/farmacia';
+const RESET_TOKEN_MINUTOS = 30;
 
 function normalizarEmail(email) {
     return String(email || '').trim().toLowerCase();
@@ -53,6 +60,34 @@ function responderCadastro(req, res, usuario, tipo) {
         usuario: removerSenha(usuario),
         redirectTo
     });
+}
+
+async function verificarEAtualizarSenhaLegada(usuario, senha, tipo) {
+    const verificacao = await verificarSenha(senha, usuario?.senha);
+
+    if (verificacao.valida && verificacao.precisaAtualizarHash) {
+        const senhaHash = await gerarHashSenha(senha);
+        const modelo = tipo === 'farmacia' ? Farmacia : Cliente;
+        await modelo.update(usuario._id, { senha: senhaHash });
+    }
+
+    return verificacao.valida;
+}
+
+function modeloPorTipo(tipo) {
+    return tipo === 'farmacia' ? Farmacia : Cliente;
+}
+
+function tipoValidoRecuperacao(tipo) {
+    return tipo === 'farmacia' || tipo === 'cliente';
+}
+
+function responderRecuperacao(req, res, payload) {
+    if (querHtml(req)) {
+        return res.redirect('/recuperar-senha?enviado=sucesso');
+    }
+
+    return res.json(payload);
 }
 
 class AuthController {
@@ -110,12 +145,19 @@ class AuthController {
                 ? await Farmacia.findByEmail(email)
                 : await Cliente.findByEmail(email);
 
-            if (!usuario || usuario.senha !== senha) {
+            const senhaValida = usuario
+                ? await verificarEAtualizarSenhaLegada(usuario, senha, tipo)
+                : false;
+
+            if (!usuario || !senhaValida) {
                 const usuarioOutroTipo = tipo === 'farmacia'
                     ? await Cliente.findByEmail(email)
                     : await Farmacia.findByEmail(email);
+                const senhaOutroTipoValida = usuarioOutroTipo
+                    ? await verificarSenha(senha, usuarioOutroTipo.senha)
+                    : { valida: false };
 
-                if (usuarioOutroTipo && usuarioOutroTipo.senha === senha) {
+                if (usuarioOutroTipo && senhaOutroTipoValida.valida) {
                     const message = tipo === 'farmacia'
                         ? 'Essa conta esta cadastrada como cliente. Entre pela tela de login do cliente.'
                         : 'Essa conta esta cadastrada como farmacia. Entre pela tela de login da farmacia.';
@@ -177,7 +219,8 @@ class AuthController {
                 return responderErroCadastro(req, res, 'cadastro-cliente', 'Cadastro do Cliente', 'Ja existe uma conta cadastrada com esse email.');
             }
 
-            const novoCliente = new Cliente(nome, cpf, email, senha, telefone, endereco);
+            const senhaHash = await gerarHashSenha(senha);
+            const novoCliente = new Cliente(nome, cpf, email, senhaHash, telefone, endereco);
             const clienteSalvo = await novoCliente.save();
             return responderCadastro(req, res, clienteSalvo, 'cliente');
         } catch (error) {
@@ -206,12 +249,80 @@ class AuthController {
                 return responderErroCadastro(req, res, 'cadastro-farmacia', 'Cadastro da Farmacia', 'Ja existe uma conta cadastrada com esse email.');
             }
 
-            const novaFarmacia = new Farmacia(nome, cnpj, email, senha, telefone, Number(taxaEntrega), aberta, endereco);
+            const senhaHash = await gerarHashSenha(senha);
+            const novaFarmacia = new Farmacia(nome, cnpj, email, senhaHash, telefone, Number(taxaEntrega), aberta, endereco);
             const farmaciaSalva = await novaFarmacia.save();
             return responderCadastro(req, res, farmaciaSalva, 'farmacia');
         } catch (error) {
             console.error('Erro ao cadastrar farmacia pelo login:', error);
             return responderErroCadastro(req, res, 'cadastro-farmacia', 'Cadastro da Farmacia', 'Nao foi possivel cadastrar a farmacia. Confira os dados informados.');
+        }
+    }
+
+    static async solicitarRecuperacaoSenha(req, res) {
+        try {
+            const email = normalizarEmail(req.body.email);
+            const tipo = req.body.tipoConta || req.body.tipoLogin || req.body.tipo;
+
+            if (!email || !tipoValidoRecuperacao(tipo)) {
+                return res.status(400).json({ message: 'Informe email e tipo de conta validos.' });
+            }
+
+            const modelo = modeloPorTipo(tipo);
+            const usuario = await modelo.findByEmail(email);
+            const message = 'Se houver uma conta com esse email, um link de recuperacao sera gerado.';
+
+            if (!usuario) {
+                return responderRecuperacao(req, res, { message });
+            }
+
+            const token = gerarTokenRecuperacao();
+            const tokenHash = gerarHashToken(token);
+            const expiraEm = new Date(Date.now() + RESET_TOKEN_MINUTOS * 60 * 1000);
+            await modelo.definirTokenRecuperacao(usuario._id, tokenHash, expiraEm);
+
+            const resetPath = `/redefinir-senha?tipo=${tipo}&token=${token}`;
+            const resetLink = `${req.protocol}://${req.get('host')}${resetPath}`;
+
+            return responderRecuperacao(req, res, {
+                message,
+                resetLink,
+                expiraEm
+            });
+        } catch (error) {
+            console.error('Erro ao solicitar recuperacao de senha:', error);
+            return res.status(500).json({ message: 'Erro interno ao solicitar recuperacao de senha' });
+        }
+    }
+
+    static async redefinirSenha(req, res) {
+        try {
+            const { token, senha } = req.body;
+            const tipo = req.body.tipoConta || req.body.tipoLogin || req.body.tipo;
+
+            if (!token || !senha || !tipoValidoRecuperacao(tipo)) {
+                return res.status(400).json({ message: 'Token, tipo de conta e nova senha sao obrigatorios.' });
+            }
+
+            if (String(senha).length < 4) {
+                return res.status(400).json({ message: 'A nova senha deve ter pelo menos 4 caracteres.' });
+            }
+
+            const modelo = modeloPorTipo(tipo);
+            const tokenHash = gerarHashToken(token);
+            const usuario = await modelo.findByResetSenhaTokenHash(tokenHash);
+
+            if (!usuario) {
+                return res.status(400).json({ message: 'Link de recuperacao invalido ou expirado.' });
+            }
+
+            const senhaHash = await gerarHashSenha(senha);
+            await modelo.atualizarSenhaRecuperada(usuario._id, senhaHash);
+
+            return res.json({ message: 'Senha redefinida com sucesso.' });
+        } catch (error) {
+            console.error('Erro ao redefinir senha:', error);
+            return res.status(500).json({ message: 'Erro interno ao redefinir senha' });
         }
     }
 }

@@ -6,6 +6,8 @@ const FarmaciaSchema = new mongoose.Schema(
         cnpj: {type: String, required: true, unique: true},
         email: {type: String, required: true, unique: true, trim: true, lowercase: true},
         senha: {type: String, required: true},
+        resetSenhaTokenHash: {type: String, default: '', select: false},
+        resetSenhaExpiraEm: {type: Date, default: null, select: false},
         telefone: {type: String, required: true},
         taxaEntrega: {type: Number, required: true},
         aberta: {type: Boolean, required: true},

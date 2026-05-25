@@ -63,6 +63,10 @@ async function entrar() {
         </form>
 
         <p class="secondary-action">
+            <a href="/recuperar-senha">Esqueci minha senha</a>
+        </p>
+
+        <p class="secondary-action">
             {{ tipo === 'cliente' ? 'Ainda nao tem cadastro?' : 'Ainda nao cadastrou a farmacia?' }}
             <a :href="tipo === 'cliente' ? '/cadastro/cliente' : '/cadastro/farmacia'">
                 {{ tipo === 'cliente' ? 'Cadastrar cliente' : 'Cadastrar farmacia' }}
